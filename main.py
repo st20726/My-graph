@@ -23,6 +23,7 @@ st.write("1년치 일별 박스오피스 데이터를 이용해 영화 관객수
 
 DATA_URL = "https://raw.githubusercontent.com/greatsong/modudata/main/data/kobis_daily.csv"
 
+
 @st.cache_data
 def load_data():
     df = pd.read_csv(DATA_URL)
@@ -111,7 +112,7 @@ selected_movie = st.selectbox(
 # 선택한 영화 데이터
 movie_df = df[df["영화명"] == selected_movie].copy()
 
-# 같은 날짜에 여러 기록이 있을 가능성을 고려하여 날짜별 일관객 합계 계산
+# 날짜별 일관객 합계
 movie_daily = (
     movie_df
     .groupby("날짜", as_index=False)["일관객"]
@@ -121,7 +122,7 @@ movie_daily = (
 
 
 # 그래프 생성
-fig = px.line(
+fig1 = px.line(
     movie_daily,
     x="날짜",
     y="일관객",
@@ -133,14 +134,14 @@ fig = px.line(
     }
 )
 
-fig.update_traces(
+fig1.update_traces(
     hovertemplate=
     "날짜: %{x|%Y-%m-%d}<br>"
     "일관객: %{y:,}명"
     "<extra></extra>"
 )
 
-fig.update_layout(
+fig1.update_layout(
     hovermode="x unified",
     height=500,
     xaxis=dict(
@@ -152,37 +153,118 @@ fig.update_layout(
 )
 
 st.plotly_chart(
-    fig,
+    fig1,
     use_container_width=True
 )
 
 
-# ==========================================
-# 그래프로 알 수 있는 것
-# ==========================================
-
+# 그래프 1 설명 입력칸
 st.markdown("### 💡 이 그래프로 알 수 있는 것")
 
-st.info(
-    "선택한 영화가 날짜에 따라 하루 동안 얼마나 많은 관객을 모았는지와 "
-    "관객수가 증가하거나 감소하는 시점을 알 수 있습니다."
+st.text_area(
+    "내용을 직접 작성하세요.",
+    placeholder="",
+    height=100,
+    key="graph1_explanation"
 )
 
 
 # ==========================================
 # 그래프 구역 2
-# 앞으로 새로운 그래프를 추가할 공간
 # ==========================================
 
 st.divider()
 
-st.header("📊 그래프 2. 앞으로 추가할 그래프")
+st.header("📈 그래프 2. 일관객 합계 상위 5편의 날짜별 변화")
 
 st.write(
-    "여기에 새로운 시간 관련 그래프를 추가할 수 있습니다."
+    "이 기간 동안 일관객 합계가 가장 큰 5편의 날짜별 일관객 변화를 비교합니다."
 )
 
-# 새로운 그래프를 추가할 때 이 부분 아래에 작성하면 됩니다.
+
+# ------------------------------------------
+# 일관객 합계가 가장 큰 영화 5편 찾기
+# ------------------------------------------
+
+top5_movies = (
+    df.groupby("영화명", as_index=False)["일관객"]
+    .sum()
+    .sort_values("일관객", ascending=False)
+    .head(5)
+)
+
+top5_movie_names = top5_movies["영화명"].tolist()
+
+
+# ------------------------------------------
+# 상위 5편의 날짜별 일관객 데이터 만들기
+# ------------------------------------------
+
+top5_daily = (
+    df[df["영화명"].isin(top5_movie_names)]
+    .groupby(["날짜", "영화명"], as_index=False)["일관객"]
+    .sum()
+    .sort_values(["날짜", "영화명"])
+)
+
+
+# ------------------------------------------
+# 그래프 생성
+# ------------------------------------------
+
+fig2 = px.line(
+    top5_daily,
+    x="날짜",
+    y="일관객",
+    color="영화명",
+    markers=True,
+    title="일관객 합계 상위 5편의 날짜별 일관객 변화",
+    labels={
+        "날짜": "날짜",
+        "일관객": "일관객 수",
+        "영화명": "영화"
+    }
+)
+
+fig2.update_traces(
+    hovertemplate=
+    "영화: %{fullData.name}<br>"
+    "날짜: %{x|%Y-%m-%d}<br>"
+    "일관객: %{y:,}명"
+    "<extra></extra>"
+)
+
+fig2.update_layout(
+    height=600,
+    hovermode="x unified",
+    xaxis=dict(
+        tickformat="%Y-%m-%d"
+    ),
+    yaxis=dict(
+        tickformat=","
+    ),
+    legend=dict(
+        title="영화",
+        itemclick="toggle",
+        itemdoubleclick="toggleothers"
+    )
+)
+
+st.plotly_chart(
+    fig2,
+    use_container_width=True
+)
+
+
+# 그래프 2 설명 입력칸
+st.markdown("### 💡 이 그래프로 알 수 있는 것")
+
+st.text_area(
+    "내용을 직접 작성하세요.",
+    placeholder="",
+    height=100,
+    key="graph2_explanation"
+)
 
 
 # ==========================================
@@ -195,5 +277,5 @@ st.divider()
 st.header("📊 그래프 3. 앞으로 추가할 그래프")
 
 st.write(
-    "새로운 분석 그래프를 추가할 수 있는 공간입니다."
+    "새로운 시간 관련 그래프를 추가할 수 있는 공간입니다."
 )
