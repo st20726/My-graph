@@ -152,7 +152,12 @@ st.plotly_chart(
 
 st.markdown("### 💡 이 그래프로 알 수 있는 것")
 
-st.info("")
+st.text_area(
+    "내용을 직접 작성하세요.",
+    placeholder="",
+    height=100,
+    key="graph1_explanation"
+)
 
 
 # ==========================================
@@ -228,7 +233,12 @@ st.plotly_chart(
 
 st.markdown("### 💡 이 그래프로 알 수 있는 것")
 
-st.info("")
+st.text_area(
+    "내용을 직접 작성하세요.",
+    placeholder="",
+    height=100,
+    key="graph2_explanation"
+)
 
 
 # ==========================================
@@ -243,18 +253,24 @@ st.write(
     "각 날짜에 박스오피스 10위권 영화들이 기록한 일관객을 모두 합산하여 보여줍니다."
 )
 
+
+# 날짜별 10위권 일관객 합계
 daily_total = (
     df.groupby("날짜", as_index=False)["일관객"]
     .sum()
     .sort_values("날짜")
 )
 
+
+# 일관객 합계가 가장 큰 날 3일
 top3_days = (
     daily_total
     .nlargest(3, "일관객")
     .sort_values("일관객", ascending=False)
 )
 
+
+# 영역 그래프
 fig3 = px.area(
     daily_total,
     x="날짜",
@@ -266,6 +282,8 @@ fig3 = px.area(
     }
 )
 
+
+# 상위 3일 표시
 for _, row in top3_days.iterrows():
     fig3.add_annotation(
         x=row["날짜"],
@@ -279,6 +297,7 @@ for _, row in top3_days.iterrows():
         ax=0,
         ay=-60
     )
+
 
 fig3.update_traces(
     hovertemplate=
@@ -305,7 +324,12 @@ st.plotly_chart(
 
 st.markdown("### 💡 이 그래프로 알 수 있는 것")
 
-st.info("")
+st.text_area(
+    "내용을 직접 작성하세요.",
+    placeholder="",
+    height=100,
+    key="graph3_explanation"
+)
 
 
 # ==========================================
@@ -320,6 +344,8 @@ st.write(
     "이 기간 동안 일관객의 합계가 가장 큰 영화 10편을 비교합니다."
 )
 
+
+# 영화별 일관객 합계와 10위권 등장 일수
 movie_summary = (
     df.groupby("영화명")
     .agg(
@@ -329,6 +355,8 @@ movie_summary = (
     .reset_index()
 )
 
+
+# TOP 10
 top10_movies = (
     movie_summary
     .sort_values("일관객합계", ascending=False)
@@ -336,6 +364,8 @@ top10_movies = (
     .sort_values("일관객합계", ascending=True)
 )
 
+
+# 가로 막대그래프
 fig4 = px.bar(
     top10_movies,
     x="일관객합계",
@@ -374,7 +404,12 @@ st.plotly_chart(
 
 st.markdown("### 💡 이 그래프로 알 수 있는 것")
 
-st.info("")
+st.text_area(
+    "내용을 직접 작성하세요.",
+    placeholder="",
+    height=100,
+    key="graph4_explanation"
+)
 
 
 # ==========================================
@@ -383,10 +418,10 @@ st.info("")
 
 st.divider()
 
-st.header("📊 그래프 5. 월 × 요일별 10위권 일관객 합계")
+st.header("🔥 그래프 5. 월 × 요일별 10위권 일관객 합계")
 
 st.write(
-    "날짜의 월과 요일을 기준으로 묶어 월별·요일별 관객수 차이를 히트맵으로 비교합니다."
+    "월과 요일에 따라 10위권 영화의 일관객 합계가 어떻게 달라지는지 히트맵으로 확인합니다."
 )
 
 
@@ -398,8 +433,9 @@ heatmap_df = df.copy()
 
 heatmap_df["월"] = heatmap_df["날짜"].dt.month
 
-# 월요일=0, 일요일=6
-weekday_names = [
+# pandas weekday:
+# 월요일 = 0, 화요일 = 1, ... 일요일 = 6
+weekday_order = [
     "월요일",
     "화요일",
     "수요일",
@@ -411,15 +447,15 @@ weekday_names = [
 
 heatmap_df["요일번호"] = heatmap_df["날짜"].dt.weekday
 heatmap_df["요일"] = heatmap_df["요일번호"].map(
-    lambda x: weekday_names[x]
+    dict(enumerate(weekday_order))
 )
 
 
 # ------------------------------------------
-# 월 × 요일별 일관객 합계
+# 월 × 요일별 일관객 합계 계산
 # ------------------------------------------
 
-monthly_weekday_total = (
+heatmap_data = (
     heatmap_df
     .groupby(["월", "요일번호", "요일"], as_index=False)["일관객"]
     .sum()
@@ -427,27 +463,41 @@ monthly_weekday_total = (
 
 
 # ------------------------------------------
-# 히트맵용 데이터 형태로 변환
+# 빠진 월 × 요일 조합도 0으로 표시
 # ------------------------------------------
 
-heatmap_pivot = (
-    monthly_weekday_total
-    .pivot(
-        index="월",
-        columns="요일",
-        values="일관객"
-    )
+all_months = list(range(1, 13))
+
+all_combinations = pd.MultiIndex.from_product(
+    [all_months, range(7)],
+    names=["월", "요일번호"]
+).to_frame(index=False)
+
+all_combinations["요일"] = all_combinations["요일번호"].map(
+    dict(enumerate(weekday_order))
 )
 
-
-# 요일 순서를 월요일 → 일요일로 고정
-heatmap_pivot = heatmap_pivot.reindex(
-    columns=weekday_names
+heatmap_data = all_combinations.merge(
+    heatmap_data,
+    on=["월", "요일번호", "요일"],
+    how="left"
 )
 
-# 월 순서를 1월 → 12월로 정렬
+heatmap_data["일관객"] = heatmap_data["일관객"].fillna(0)
+
+
+# ------------------------------------------
+# 히트맵용 형태로 변환
+# ------------------------------------------
+
+heatmap_pivot = heatmap_data.pivot(
+    index="월",
+    columns="요일",
+    values="일관객"
+)
+
 heatmap_pivot = heatmap_pivot.reindex(
-    range(1, 13)
+    columns=weekday_order
 )
 
 
@@ -462,11 +512,11 @@ fig5 = px.imshow(
         "y": "월",
         "color": "일관객 합계"
     },
-    x=weekday_names,
-    y=[f"{month}월" for month in range(1, 13)],
-    title="월 × 요일별 10위권 일관객 합계",
+    x=weekday_order,
+    y=[f"{month}월" for month in all_months],
     aspect="auto",
-    text_auto=","
+    title="월 × 요일별 10위권 일관객 합계",
+    text_auto=".3s"
 )
 
 fig5.update_traces(
@@ -477,13 +527,7 @@ fig5.update_traces(
 )
 
 fig5.update_layout(
-    height=650,
-    xaxis=dict(
-        side="bottom"
-    ),
-    yaxis=dict(
-        autorange="reversed"
-    )
+    height=650
 )
 
 st.plotly_chart(
@@ -493,10 +537,28 @@ st.plotly_chart(
 
 
 # ------------------------------------------
-# 그래프 5에서 알 수 있는 것
+# 그래프 5 설명 입력칸
 # ------------------------------------------
 
 st.markdown("### 💡 이 그래프로 알 수 있는 것")
 
-st.info("")
+st.text_area(
+    "내용을 직접 작성하세요.",
+    placeholder="",
+    height=100,
+    key="graph5_explanation"
+)
 
+
+# ==========================================
+# 그래프 구역 6
+# 앞으로 새로운 그래프를 추가할 공간
+# ==========================================
+
+st.divider()
+
+st.header("📊 그래프 6. 앞으로 추가할 그래프")
+
+st.write(
+    "새로운 시간 관련 그래프를 추가할 수 있는 공간입니다."
+)
