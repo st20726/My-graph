@@ -152,11 +152,8 @@ st.plotly_chart(
 
 st.markdown("### 💡 이 그래프로 알 수 있는 것")
 
-st.text_area(
-    "내용을 직접 작성하세요.",
-    placeholder="",
-    height=100,
-    key="graph1_explanation"
+st.info(
+    "영화의 날짜별 일관객 변화를 통해 관객의 관심이 높아지거나 낮아지는 시점을 알 수 있습니다."
 )
 
 
@@ -233,11 +230,8 @@ st.plotly_chart(
 
 st.markdown("### 💡 이 그래프로 알 수 있는 것")
 
-st.text_area(
-    "내용을 직접 작성하세요.",
-    placeholder="",
-    height=100,
-    key="graph2_explanation"
+st.info(
+    "관객수가 많은 상위 영화들의 날짜별 관객수 변화를 비교하여 영화마다 흥행이 증가하고 감소하는 시점의 차이를 알 수 있습니다."
 )
 
 
@@ -253,24 +247,18 @@ st.write(
     "각 날짜에 박스오피스 10위권 영화들이 기록한 일관객을 모두 합산하여 보여줍니다."
 )
 
-
-# 날짜별 10위권 일관객 합계
 daily_total = (
     df.groupby("날짜", as_index=False)["일관객"]
     .sum()
     .sort_values("날짜")
 )
 
-
-# 일관객 합계가 가장 큰 날 3일
 top3_days = (
     daily_total
     .nlargest(3, "일관객")
     .sort_values("일관객", ascending=False)
 )
 
-
-# 영역 그래프
 fig3 = px.area(
     daily_total,
     x="날짜",
@@ -282,8 +270,6 @@ fig3 = px.area(
     }
 )
 
-
-# 상위 3일 표시
 for _, row in top3_days.iterrows():
     fig3.add_annotation(
         x=row["날짜"],
@@ -297,7 +283,6 @@ for _, row in top3_days.iterrows():
         ax=0,
         ay=-60
     )
-
 
 fig3.update_traces(
     hovertemplate=
@@ -324,11 +309,8 @@ st.plotly_chart(
 
 st.markdown("### 💡 이 그래프로 알 수 있는 것")
 
-st.text_area(
-    "내용을 직접 작성하세요.",
-    placeholder="",
-    height=100,
-    key="graph3_explanation"
+st.info(
+    "날짜별 영화관 관객 규모의 변화를 확인하고 전체적으로 관객이 많았던 시기와 적었던 시기를 알 수 있습니다."
 )
 
 
@@ -344,11 +326,6 @@ st.write(
     "이 기간 동안 일관객의 합계가 가장 큰 영화 10편을 비교합니다."
 )
 
-
-# ------------------------------------------
-# 영화별 일관객 합계와 10위권 등장 일수 계산
-# ------------------------------------------
-
 movie_summary = (
     df.groupby("영화명")
     .agg(
@@ -358,19 +335,12 @@ movie_summary = (
     .reset_index()
 )
 
-
-# 일관객 합계가 큰 순서로 정렬 후 TOP 10
 top10_movies = (
     movie_summary
     .sort_values("일관객합계", ascending=False)
     .head(10)
     .sort_values("일관객합계", ascending=True)
 )
-
-
-# ------------------------------------------
-# 가로 막대그래프
-# ------------------------------------------
 
 fig4 = px.bar(
     top10_movies,
@@ -385,8 +355,6 @@ fig4 = px.bar(
     custom_data=["등장일수"]
 )
 
-
-# 마우스를 올렸을 때 표시되는 내용
 fig4.update_traces(
     hovertemplate=
     "영화: %{y}<br>"
@@ -394,7 +362,6 @@ fig4.update_traces(
     "10위권에 든 날수: %{customdata[0]}일"
     "<extra></extra>"
 )
-
 
 fig4.update_layout(
     height=600,
@@ -411,30 +378,135 @@ st.plotly_chart(
     use_container_width=True
 )
 
-
-# ------------------------------------------
-# 그래프 4 설명 입력칸
-# ------------------------------------------
-
 st.markdown("### 💡 이 그래프로 알 수 있는 것")
 
-st.text_area(
-    "내용을 직접 작성하세요.",
-    placeholder="",
-    height=100,
-    key="graph4_explanation"
+st.info(
+    "기간 동안 누적된 일관객을 비교하여 어떤 영화가 가장 많은 관객을 모았고 10위권에 얼마나 오래 머물렀는지 알 수 있습니다."
 )
 
 
 # ==========================================
 # 그래프 구역 5
-# 앞으로 새로운 그래프를 추가할 공간
 # ==========================================
 
 st.divider()
 
-st.header("📊 그래프 5. 앞으로 추가할 그래프")
+st.header("📊 그래프 5. 월 × 요일별 10위권 일관객 합계")
 
 st.write(
-    "새로운 시간 관련 그래프를 추가할 수 있는 공간입니다."
+    "날짜의 월과 요일을 기준으로 묶어 월별·요일별 관객수 차이를 히트맵으로 비교합니다."
 )
+
+
+# ------------------------------------------
+# 월과 요일 추출
+# ------------------------------------------
+
+heatmap_df = df.copy()
+
+heatmap_df["월"] = heatmap_df["날짜"].dt.month
+
+# 월요일=0, 일요일=6
+weekday_names = [
+    "월요일",
+    "화요일",
+    "수요일",
+    "목요일",
+    "금요일",
+    "토요일",
+    "일요일"
+]
+
+heatmap_df["요일번호"] = heatmap_df["날짜"].dt.weekday
+heatmap_df["요일"] = heatmap_df["요일번호"].map(
+    lambda x: weekday_names[x]
+)
+
+
+# ------------------------------------------
+# 월 × 요일별 일관객 합계
+# ------------------------------------------
+
+monthly_weekday_total = (
+    heatmap_df
+    .groupby(["월", "요일번호", "요일"], as_index=False)["일관객"]
+    .sum()
+)
+
+
+# ------------------------------------------
+# 히트맵용 데이터 형태로 변환
+# ------------------------------------------
+
+heatmap_pivot = (
+    monthly_weekday_total
+    .pivot(
+        index="월",
+        columns="요일",
+        values="일관객"
+    )
+)
+
+
+# 요일 순서를 월요일 → 일요일로 고정
+heatmap_pivot = heatmap_pivot.reindex(
+    columns=weekday_names
+)
+
+# 월 순서를 1월 → 12월로 정렬
+heatmap_pivot = heatmap_pivot.reindex(
+    range(1, 13)
+)
+
+
+# ------------------------------------------
+# 히트맵 생성
+# ------------------------------------------
+
+fig5 = px.imshow(
+    heatmap_pivot,
+    labels={
+        "x": "요일",
+        "y": "월",
+        "color": "일관객 합계"
+    },
+    x=weekday_names,
+    y=[f"{month}월" for month in range(1, 13)],
+    title="월 × 요일별 10위권 일관객 합계",
+    aspect="auto",
+    text_auto=","
+)
+
+fig5.update_traces(
+    hovertemplate=
+    "%{y} %{x}<br>"
+    "10위권 일관객 합계: %{z:,}명"
+    "<extra></extra>"
+)
+
+fig5.update_layout(
+    height=650,
+    xaxis=dict(
+        side="bottom"
+    ),
+    yaxis=dict(
+        autorange="reversed"
+    )
+)
+
+st.plotly_chart(
+    fig5,
+    use_container_width=True
+)
+
+
+# ------------------------------------------
+# 그래프 5에서 알 수 있는 것
+# ------------------------------------------
+
+st.markdown("### 💡 이 그래프로 알 수 있는 것")
+
+st.info(
+    "월과 요일에 따라 10위권 영화의 일관객 합계가 어떻게 달라지는지 비교하여 관객이 많이 몰리는 시기를 알 수 있습니다."
+)
+
