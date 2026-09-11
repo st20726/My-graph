@@ -97,8 +97,6 @@ st.write(
     "영화를 하나 선택하면 해당 영화의 날짜별 일관객 변화를 확인할 수 있습니다."
 )
 
-
-# 영화 선택
 movie_list = sorted(
     df["영화명"].dropna().unique().tolist()
 )
@@ -108,11 +106,8 @@ selected_movie = st.selectbox(
     movie_list
 )
 
-
-# 선택한 영화 데이터
 movie_df = df[df["영화명"] == selected_movie].copy()
 
-# 날짜별 일관객 합계
 movie_daily = (
     movie_df
     .groupby("날짜", as_index=False)["일관객"]
@@ -120,8 +115,6 @@ movie_daily = (
     .sort_values("날짜")
 )
 
-
-# 그래프 생성
 fig1 = px.line(
     movie_daily,
     x="날짜",
@@ -157,8 +150,6 @@ st.plotly_chart(
     use_container_width=True
 )
 
-
-# 그래프 1 설명 입력칸
 st.markdown("### 💡 이 그래프로 알 수 있는 것")
 
 st.text_area(
@@ -181,11 +172,6 @@ st.write(
     "이 기간 동안 일관객 합계가 가장 큰 5편의 날짜별 일관객 변화를 비교합니다."
 )
 
-
-# ------------------------------------------
-# 일관객 합계가 가장 큰 영화 5편 찾기
-# ------------------------------------------
-
 top5_movies = (
     df.groupby("영화명", as_index=False)["일관객"]
     .sum()
@@ -195,22 +181,12 @@ top5_movies = (
 
 top5_movie_names = top5_movies["영화명"].tolist()
 
-
-# ------------------------------------------
-# 상위 5편의 날짜별 일관객 데이터 만들기
-# ------------------------------------------
-
 top5_daily = (
     df[df["영화명"].isin(top5_movie_names)]
     .groupby(["날짜", "영화명"], as_index=False)["일관객"]
     .sum()
     .sort_values(["날짜", "영화명"])
 )
-
-
-# ------------------------------------------
-# 그래프 생성
-# ------------------------------------------
 
 fig2 = px.line(
     top5_daily,
@@ -255,8 +231,6 @@ st.plotly_chart(
     use_container_width=True
 )
 
-
-# 그래프 2 설명 입력칸
 st.markdown("### 💡 이 그래프로 알 수 있는 것")
 
 st.text_area(
@@ -269,12 +243,120 @@ st.text_area(
 
 # ==========================================
 # 그래프 구역 3
+# ==========================================
+
+st.divider()
+
+st.header("📊 그래프 3. 날짜별 10위권 일관객 합계")
+
+st.write(
+    "각 날짜에 박스오피스 10위권 영화들이 기록한 일관객을 모두 합산하여 보여줍니다."
+)
+
+
+# ------------------------------------------
+# 날짜별 10위권 일관객 합계 계산
+# ------------------------------------------
+
+daily_total = (
+    df.groupby("날짜", as_index=False)["일관객"]
+    .sum()
+    .sort_values("날짜")
+)
+
+
+# ------------------------------------------
+# 일관객 합계가 가장 큰 날 3일 찾기
+# ------------------------------------------
+
+top3_days = (
+    daily_total
+    .nlargest(3, "일관객")
+    .sort_values("일관객", ascending=False)
+)
+
+
+# ------------------------------------------
+# 영역 그래프 생성
+# ------------------------------------------
+
+fig3 = px.area(
+    daily_total,
+    x="날짜",
+    y="일관객",
+    title="날짜별 10위권 일관객 합계",
+    labels={
+        "날짜": "날짜",
+        "일관객": "10위권 일관객 합계"
+    }
+)
+
+
+# ------------------------------------------
+# 상위 3일 표시
+# ------------------------------------------
+
+for _, row in top3_days.iterrows():
+    fig3.add_annotation(
+        x=row["날짜"],
+        y=row["일관객"],
+        text=(
+            f"{row['날짜'].strftime('%Y-%m-%d')}"
+            f"<br>{row['일관객']:,}명"
+        ),
+        showarrow=True,
+        arrowhead=2,
+        ax=0,
+        ay=-60
+    )
+
+
+fig3.update_traces(
+    hovertemplate=
+    "날짜: %{x|%Y-%m-%d}<br>"
+    "10위권 일관객 합계: %{y:,}명"
+    "<extra></extra>"
+)
+
+fig3.update_layout(
+    height=600,
+    hovermode="x unified",
+    xaxis=dict(
+        tickformat="%Y-%m-%d"
+    ),
+    yaxis=dict(
+        tickformat=","
+    )
+)
+
+st.plotly_chart(
+    fig3,
+    use_container_width=True
+)
+
+
+# ------------------------------------------
+# 그래프 3 설명 입력칸
+# ------------------------------------------
+
+st.markdown("### 💡 이 그래프로 알 수 있는 것")
+
+st.text_area(
+    "내용을 직접 작성하세요.",
+    placeholder="",
+    height=100,
+    key="graph3_explanation"
+)
+
+
+# ==========================================
+# 그래프 구역 4
 # 앞으로 새로운 그래프를 추가할 공간
 # ==========================================
 
 st.divider()
 
-st.header("📊 그래프 3. 앞으로 추가할 그래프")
+st.header("📊 그래프 4. 앞으로 추가할 그래프")
 
 st.write(
     "새로운 시간 관련 그래프를 추가할 수 있는 공간입니다."
